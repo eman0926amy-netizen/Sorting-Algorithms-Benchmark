@@ -3,29 +3,37 @@ package sortingbenchmark;
 import java.util.Arrays;
 import java.util.Random;
 
+/**
+ * Sorting-Algorithms-Benchmark
+ * قياس زمن تنفيذ خمس خوارزميات ترتيب بالميكروثانية
+ * على أربع حالات من البيانات (حجم المصفوفة N = 100,000).
+ */
 public class SortingBenchmark {
 
     static final int N = 100_000;
-    static final long SEED = 42L; 
+    static final long SEED = 42L; // بذرة ثابتة لتكرار نفس البيانات في كل تشغيل
 
-    
+    // أسماء الخوارزميات وحالات الاختبار (لطباعة الجدول)
     static final String[] ALGOS = {"Selection Sort", "Insertion Sort", "Bubble Sort", "Merge Sort", "Quick Sort"};
     static final String[] CASES = {"Random", "Reversed", "Partial 80%", "Sorted"};
 
+    // ===================== توليد البيانات =====================
+
+    /** مصفوفة عشوائية تماماً */
     static int[] generateRandom(Random rnd) {
         int[] a = new int[N];
         for (int i = 0; i < N; i++) a[i] = rnd.nextInt(1_000_000);
         return a;
     }
 
-   
+    /** مصفوفة مرتبة تصاعدياً */
     static int[] generateSorted(Random rnd) {
         int[] a = generateRandom(rnd);
         Arrays.sort(a);
         return a;
     }
 
-    
+    /** مصفوفة مرتبة عكسياً (من الأكبر إلى الأصغر) */
     static int[] generateReversed(Random rnd) {
         int[] a = generateSorted(rnd);
         for (int i = 0, j = N - 1; i < j; i++, j--) {
@@ -34,10 +42,10 @@ public class SortingBenchmark {
         return a;
     }
 
-    
+    /** مصفوفة مرتبة جزئياً: ~80% في مكانها الصحيح و ~20% عناصر مبعثرة عشوائياً */
     static int[] generatePartiallySorted(Random rnd) {
         int[] a = generateSorted(rnd);
-        int swaps = (int) (N * 0.20 / 2); 
+        int swaps = (int) (N * 0.20 / 2); // كل عملية تبديل تُزيح عنصرين => 20% تقريباً
         for (int k = 0; k < swaps; k++) {
             int i = rnd.nextInt(N), j = rnd.nextInt(N);
             int t = a[i]; a[i] = a[j]; a[j] = t;
@@ -45,7 +53,9 @@ public class SortingBenchmark {
         return a;
     }
 
-    
+    // ===================== خوارزميات الترتيب =====================
+
+    /** Selection Sort: O(N^2) في جميع الحالات */
     static void selectionSort(int[] a) {
         int n = a.length;
         for (int i = 0; i < n - 1; i++) {
@@ -57,7 +67,7 @@ public class SortingBenchmark {
         }
     }
 
-    
+    /** Insertion Sort: O(N^2) في الأسوأ، O(N) إذا كانت المصفوفة مرتبة */
     static void insertionSort(int[] a) {
         for (int i = 1; i < a.length; i++) {
             int key = a[i];
@@ -70,7 +80,7 @@ public class SortingBenchmark {
         }
     }
 
-   
+    /** Bubble Sort مع توقف مبكر إذا لم يحدث أي تبديل: O(N) في الأفضل */
     static void bubbleSort(int[] a) {
         int n = a.length;
         for (int i = 0; i < n - 1; i++) {
@@ -81,11 +91,11 @@ public class SortingBenchmark {
                     swapped = true;
                 }
             }
-            if (!swapped) break; 
+            if (!swapped) break; // المصفوفة أصبحت مرتبة
         }
     }
 
-  
+    /** Merge Sort: O(N log N) في جميع الحالات */
     static void mergeSort(int[] a, int left, int right) {
         if (left >= right) return;
         int mid = left + (right - left) / 2;
@@ -105,7 +115,11 @@ public class SortingBenchmark {
         while (j < R.length) a[k++] = R[j++];
     }
 
-    
+    /**
+     * Quick Sort: المحور (Pivot) = العنصر الأخير (تقسيم Lomuto).
+     * O(N log N) في المتوسط، لكن O(N^2) إذا كانت المصفوفة مرتبة/معكوسة
+     * لأن المحور يكون دائماً أصغر أو أكبر عنصر.
+     */
     static void quickSort(int[] a, int low, int high) {
         if (low < high) {
             int p = partition(a, low, high);
@@ -127,16 +141,17 @@ public class SortingBenchmark {
         return i + 1;
     }
 
+    // ===================== القياس =====================
 
-
-    
+    /** تشغيل الخوارزمية رقم algo على نسخة من المصفوفة وإرجاع الزمن بالميكروثانية */
     static long measure(int algo, int[] original) {
-        
+        // 1. نسخة مستقلة ومطابقة للبيانات الأصلية (لا يدخل زمن النسخ في القياس)
         int[] testArray = Arrays.copyOf(original, original.length);
 
-        
+        // 2. تسجيل وقت البداية بالنانوثانية
         long startTime = System.nanoTime();
 
+        // 3. استدعاء خوارزمية الترتيب
         switch (algo) {
             case 0: selectionSort(testArray); break;
             case 1: insertionSort(testArray); break;
@@ -145,11 +160,11 @@ public class SortingBenchmark {
             case 4: quickSort(testArray, 0, testArray.length - 1); break;
         }
 
-       
+        // 4. تسجيل وقت النهاية وتحويله إلى ميكروثانية
         long endTime = System.nanoTime();
         long durationInMicroseconds = (endTime - startTime) / 1000;
 
-       
+        // التحقق من صحة الترتيب (خارج القياس)
         if (!isSorted(testArray)) {
             throw new IllegalStateException("الخوارزمية " + ALGOS[algo] + " لم ترتب المصفوفة بشكل صحيح!");
         }
@@ -161,10 +176,11 @@ public class SortingBenchmark {
         return true;
     }
 
-   
+    // ===================== البرنامج الرئيسي =====================
 
     public static void main(String[] args) throws Exception {
-        
+        // Quick Sort بمحور أخير يحتاج عمق استدعاءات ~N في الحالة الأسوأ،
+        // لذلك نشغّل البرنامج في Thread بحجم ذاكرة stack كبير لتجنب StackOverflowError.
         Thread t = new Thread(null, SortingBenchmark::run, "benchmark", 1L << 29);
         t.start();
         t.join();
@@ -173,7 +189,7 @@ public class SortingBenchmark {
     static void run() {
         Random rnd = new Random(SEED);
 
-       
+        // توليد حالات الاختبار الأربع
         int[][] datasets = {
             generateRandom(rnd),
             generateReversed(rnd),
@@ -181,7 +197,7 @@ public class SortingBenchmark {
             generateSorted(rnd)
         };
 
-        
+        // إحماء JVM (Warm-up) على مصفوفة صغيرة حتى لا تتأثر أول قياسات بالـ JIT
         int[] warm = new Random(1).ints(2000, 0, 10000).toArray();
         for (int w = 0; w < 5; w++)
             for (int algo = 0; algo < 5; algo++) measure(algo, warm);
@@ -193,7 +209,7 @@ public class SortingBenchmark {
             }
         }
 
-       
+        // طباعة الجدول المنظم
         System.out.println("N = " + N + "   (times in microseconds, us)");
         System.out.println();
         System.out.printf("%-16s | %-14s | %-14s | %-14s | %-14s%n",
